@@ -21,6 +21,7 @@ volumes:
 services:
   ### ECCube4 ##################################
   ec-cube:
+    container_name: ec-cube
     build:
       context: .
       args:
