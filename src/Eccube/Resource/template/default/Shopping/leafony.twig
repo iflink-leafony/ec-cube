@@ -44,13 +44,13 @@ file that was distributed with this source code.
                 <div class="ec-progress__label">{{ 'front.cart.nav__order'|trans }}
                 </div>
             </li>
-            <li class="ec-progress__item is-complete">
+            <li class="ec-progress__item">
                 <div class="ec-progress__number">{{ step }}{% set step = step + 1 %}
                 </div>
                 <div class="ec-progress__label">{{ 'front.cart.nav__confirm'|trans }}
                 </div>
             </li>
-            <li class="ec-progress__item">
+            <li class="ec-progress__item is-complete">
                 <div class="ec-progress__number">{{ step }}{% set step = step + 1 %}
                 </div>
                 <div class="ec-progress__label">本人確認
@@ -66,7 +66,7 @@ file that was distributed with this source code.
     </div>
 </div>
 
-    <form id="shopping-form" method="post" action="{{ url('shopping_leafony') }}">
+    <form id="shopping-form" method="post" action="{{ url('shopping_checkout') }}">
     {{ form_widget(form._token) }}
     <div class="ec-orderRole">
         <div class="ec-orderRole__detail">
@@ -218,12 +218,56 @@ file that was distributed with this source code.
                     </dl>
                 </div>
                 {% endif %}
+                <div id="leafony" style="margin-top: 10px;">
+                  <div id="leafony-confirm" style="background-color: #fff; font-size: 20px; color: #f00; padding: 10px 0; text-align: center; font-weight: bold;">
+                    指紋認証で本人確認をすると、ご注文が確定します。
+                  </div>
+                  <div id="leafony-failed" style="background-color: #fff; font-size: 20px; color: #f00; padding: 10px 0; text-align: center; font-weight: bold; display: none;">
+                    指紋認証で本人確認をすると、ご注文が確定します。<br>本人確認に失敗しました。もう一度お試しください。
+                  </div>
+                  <div id="leafony-complete" style="background-color: #fff; font-size: 20px; color: #f00; padding: 10px 0; text-align: center; font-weight: bold; display: none;">
+                    <b>本人確認が完了しました。<br>お手続きを完了しています。<br>画面が切り替わるまでしばらくお待ちください。</br>
+                    <img style="width: 48px;" src="https://www.benricho.org/loading_images/img-size/loading-l-3.gif" />
+                  </div>
+                </div>
                 <div class="ec-totalBox__btn">
-                    <button type="submit" class="ec-blockBtn--action">{{ 'front.shopping.checkout'|trans }}</button>
+                    <!-- <button type="submit" class="ec-blockBtn--action">{{ 'front.shopping.checkout'|trans }}</button> -->
                     <a href="{{ url('shopping') }}" class="ec-blockBtn--cancel">{{ 'front.shopping.back_to_order'|trans }}</a>
                 </div>
             </div>
         </div>
     </div>
 </form>
+
+<script>
+$(function() {
+    var sock = new WebSocket('wss://iflink-leafony.tk/ws/');
+
+    // 接続
+    sock.addEventListener('open',function(e){
+        console.log('Socket 接続成功');
+    });
+
+    // サーバーからデータを受け取る
+    sock.addEventListener('message',function(e){
+        console.log(e.data);
+        if (e.data == 'auth ok') {
+          $("#leafony-confirm").hide();
+          $("#leafony-failed").hide();
+          $("#leafony-complete").show();
+          setTimeout(function() {
+            $("#shopping-form").submit();
+          }, 3000);
+        } else {
+          $("#leafony-confirm").hide();
+          $("#leafony-failed").show();
+        }
+    });
+
+    sock.onclose = function (e) {
+        console.log("Close Code = " + e.code);
+        console.log("Close Reason = " + e.reason);
+    }
+});
+</script>
 {% endblock %}

@@ -315,6 +315,93 @@ class ShoppingController extends AbstractShoppingController
     }
 
     /**
+     * 注文確認画面を表示する.
+     *
+     * ここではPaymentMethod::verifyがコールされます.
+     * PaymentMethod::verifyではクレジットカードの有効性チェック等, 注文手続きを進められるかどうかのチェック処理を行う事を想定しています.
+     * PaymentMethod::verifyでエラーが発生した場合は, 注文手続き画面へリダイレクトします.
+     *
+     * @Route("/shopping/leafony", name="shopping_leafony", methods={"POST"})
+     * @Template("Shopping/leafony.twig")
+     */
+    public function leafony(Request $request)
+    {
+        // ログイン状態のチェック.
+        if ($this->orderHelper->isLoginRequired()) {
+            log_info('[注文確認] 未ログインもしくはRememberMeログインのため, ログイン画面に遷移します.');
+
+            return $this->redirectToRoute('shopping_login');
+        }
+
+        // 受注の存在チェック
+        $preOrderId = $this->cartService->getPreOrderId();
+        $Order = $this->orderHelper->getPurchaseProcessingOrder($preOrderId);
+        if (!$Order) {
+            log_info('[注文確認] 購入処理中の受注が存在しません.', [$preOrderId]);
+
+            return $this->redirectToRoute('shopping_error');
+        }
+
+        $form = $this->createForm(OrderType::class, $Order);
+        $form->handleRequest($request);
+
+        // if ($form->isSubmitted() && $form->isValid()) {
+        //     log_info('[注文確認] 集計処理を開始します.', [$Order->getId()]);
+        //     $response = $this->executePurchaseFlow($Order);
+        //     $this->entityManager->flush();
+
+        //     if ($response) {
+        //         return $response;
+        //     }
+
+        //     log_info('[注文確認] PaymentMethod::verifyを実行します.', [$Order->getPayment()->getMethodClass()]);
+        //     $paymentMethod = $this->createPaymentMethod($Order, $form);
+        //     $PaymentResult = $paymentMethod->verify();
+
+        //     if ($PaymentResult) {
+        //         if (!$PaymentResult->isSuccess()) {
+        //             $this->entityManager->rollback();
+        //             foreach ($PaymentResult->getErrors() as $error) {
+        //                 $this->addError($error);
+        //             }
+
+        //             log_info('[注文確認] PaymentMethod::verifyのエラーのため, 注文手続き画面へ遷移します.', [$PaymentResult->getErrors()]);
+
+        //             return $this->redirectToRoute('shopping');
+        //         }
+
+        //         $response = $PaymentResult->getResponse();
+        //         if ($response instanceof Response && ($response->isRedirection() || $response->isSuccessful())) {
+        //             $this->entityManager->flush();
+
+        //             log_info('[注文確認] PaymentMethod::verifyが指定したレスポンスを表示します.');
+
+        //             return $response;
+        //         }
+        //     }
+
+        //     $this->entityManager->flush();
+
+        //     log_info('[注文確認] 注文確認画面を表示します.');
+
+        //     return [
+        //         'form' => $form->createView(),
+        //         'Order' => $Order,
+        //     ];
+        // }
+
+        log_info('[注文確認] フォームエラーのため, 注文手続画面を表示します.', [$Order->getId()]);
+
+        // FIXME @Templateの差し替え.
+//        $request->attributes->set('_template', new Template(['template' => 'Shopping/index.twig']));
+
+        return [
+            'form' => $form->createView(),
+            'Order' => $Order,
+        ];
+    }
+
+    /**
      * 注文処理を行う.
      *
      * 決済プラグインによる決済処理および注文の確定処理を行います.
