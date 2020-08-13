@@ -229,6 +229,10 @@ file that was distributed with this source code.
                     <b>本人確認が完了しました。<br>お手続きを完了しています。<br>画面が切り替わるまでしばらくお待ちください。</br>
                     <img style="width: 48px;" src="https://www.benricho.org/loading_images/img-size/loading-l-3.gif" />
                   </div>
+                  <div id="leafony-close" style="background-color: #fff; font-size: 20px; color: #f00; padding: 10px 0; text-align: center; font-weight: bold; display: none;">
+                    <b>一定時間操作が無かったため認証に失敗しました。<br>再試行してください。</br>
+                    <a id="reconnect-btn" href="#">再試行</a>
+                  </div>
                 </div>
                 <div class="ec-totalBox__btn">
                     <!-- <button type="submit" class="ec-blockBtn--action">{{ 'front.shopping.checkout'|trans }}</button> -->
@@ -240,34 +244,58 @@ file that was distributed with this source code.
 </form>
 
 <script>
-$(function() {
-    var sock = new WebSocket('wss://iflink-leafony.tk/ws/');
+function startWebsocket() {
+    var sock = new WebSocket('wss://iflink-leafony.tk/ws/?uid=eccube');
 
     // 接続
-    sock.addEventListener('open',function(e){
+    sock.onopen = function(e) {
         console.log('Socket 接続成功');
-    });
+        $("#leafony-confirm").show();
+        $("#leafony-close").hide();
+        $("#leafony-complete").hide();
+        $("#leafony-failed").hide();
+    }
 
     // サーバーからデータを受け取る
-    sock.addEventListener('message',function(e){
+    sock.onmessage = function(e) {
         console.log(e.data);
+        if (e.data != 'auth ok' && e.data != 'auth ng') {
+            return;
+        }
         if (e.data == 'auth ok') {
           $("#leafony-confirm").hide();
           $("#leafony-failed").hide();
           $("#leafony-complete").show();
+          $("#leafony-close").hide();
           setTimeout(function() {
             $("#shopping-form").submit();
           }, 3000);
         } else {
           $("#leafony-confirm").hide();
+          $("#leafony-close").hide();
+          $("#leafony-complete").hide();
           $("#leafony-failed").show();
         }
-    });
+    }
 
     sock.onclose = function (e) {
+        sock = null;
+        $("#leafony-confirm").hide();
+        $("#leafony-close").show();
+        $("#leafony-complete").hide();
+        $("#leafony-failed").hide();
         console.log("Close Code = " + e.code);
         console.log("Close Reason = " + e.reason);
     }
+}
+
+startWebsocket();
+
+$(function() {
+    $('#reconnect-btn').on('click', function(e) {
+        e.preventDefault();
+        startWebsocket();
+    });
 });
 </script>
 {% endblock %}
