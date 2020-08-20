@@ -24,6 +24,8 @@ class TopController extends AbstractController
      */
     public function index()
     {
+        header('Location: /products/list');
+        exit;
         return [];
     }
 }
